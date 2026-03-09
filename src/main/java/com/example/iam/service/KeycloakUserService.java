@@ -9,6 +9,6 @@ public interface KeycloakUserService {
 
     UserRepresentation getUserById(String userId); // Keycloak에서 사용자 정보를 조회 해온다.
 
-    UserRepresentation deleteUserById(String userId);
+    void deleteUserById(String userId);
 
 }

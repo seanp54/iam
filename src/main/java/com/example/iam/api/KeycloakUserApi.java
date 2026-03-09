@@ -2,33 +2,34 @@ package com.example.iam.api;
 
 import com.example.iam.dto.UserRegistrationRecord;
 import com.example.iam.service.KeycloakUserService;
-import lombok.AllArgsConstructor;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.keycloak.representations.idm.UserRepresentation;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 
 @RestController
 @RequestMapping("/users")
-@AllArgsConstructor
-public class KeycloakUserApi extends RuntimeException {
+@RequiredArgsConstructor
+public class KeycloakUserApi {
 
-    @Autowired
-    private KeycloakUserService keycloakUserService;
+    private final KeycloakUserService keycloakUserService;
 
     @PostMapping
-    public UserRegistrationRecord craeteUser(@RequestBody UserRegistrationRecord userRegistrationRecord) {
-
+    @ResponseStatus(HttpStatus.CREATED)
+    public UserRegistrationRecord createUser(@Valid @RequestBody UserRegistrationRecord userRegistrationRecord) {
         return keycloakUserService.createUser(userRegistrationRecord);
     }
+
     @GetMapping
     public UserRepresentation getUser(Principal principal) {
-
         return keycloakUserService.getUserById(principal.getName());
     }
 
     @DeleteMapping("/{userid}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteUserById(@PathVariable String userid) {
         keycloakUserService.deleteUserById(userid);
     }
