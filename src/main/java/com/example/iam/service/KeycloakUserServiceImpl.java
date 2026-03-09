@@ -4,21 +4,20 @@ import com.example.iam.dto.UserRegistrationRecord;
 import jakarta.ws.rs.core.Response;
 import org.keycloak.admin.client.Keycloak;
 import lombok.extern.slf4j.Slf4j;
-import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @Slf4j
 public class KeycloakUserServiceImpl implements KeycloakUserService {
 
-    @Value("master")
+    @Value("${keycloak.realm}")
     private String realm;
 
     private final Keycloak keycloak;
@@ -32,45 +31,56 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
      *
      * @param userRegistrationRecord 생성할 사용자의 등록 정보 (username, email, password 등)
      * @return 생성된 사용자의 등록 정보
-     * @throws RuntimeException 사용자 생성에 실패한 경우 (HTTP 201이 아닌 응답)
+     * @throws UserCreationException 사용자 생성에 실패한 경우 (HTTP 201이 아닌 응답)
+     * @throws IllegalArgumentException 필수 입력값이 누락된 경우
      */
     @Override
     public UserRegistrationRecord createUser(UserRegistrationRecord userRegistrationRecord) {
+        validateUserRegistration(userRegistrationRecord);
 
-        // Create User
+        UserRepresentation user = buildUserRepresentation(userRegistrationRecord);
+
+        UsersResource usersResource = getUsersResource();
+
+        try (Response response = usersResource.create(user)) {
+            if (response.getStatus() == Response.Status.CREATED.getStatusCode()) {
+                return userRegistrationRecord;
+            }
+
+            log.error("Keycloak 사용자 생성 실패 - status: {}, reason: {}",
+                    response.getStatus(), response.getStatusInfo().getReasonPhrase());
+            throw new UserCreationException(
+                    "Keycloak 사용자 생성에 실패했습니다. HTTP Status: " + response.getStatus());
+        }
+    }
+
+    private void validateUserRegistration(UserRegistrationRecord record) {
+        Assert.notNull(record, "사용자 등록 정보는 null일 수 없습니다.");
+        Assert.hasText(record.username(), "username은 필수 입력값입니다.");
+        Assert.hasText(record.email(), "email은 필수 입력값입니다.");
+        Assert.hasText(record.password(), "password는 필수 입력값입니다.");
+    }
+
+    private UserRepresentation buildUserRepresentation(UserRegistrationRecord record) {
         UserRepresentation user = new UserRepresentation();
         user.setEnabled(true);
-        user.setUsername(userRegistrationRecord.username());
-        user.setEmail(userRegistrationRecord.email());
-        user.setFirstName(userRegistrationRecord.firstName());
-        user.setLastName(userRegistrationRecord.lastName());
+        user.setUsername(record.username());
+        user.setEmail(record.email());
+        user.setFirstName(record.firstName());
+        user.setLastName(record.lastName());
         user.setEmailVerified(true);
 
-        // Set Credential
         CredentialRepresentation cred = new CredentialRepresentation();
-        cred.setValue(userRegistrationRecord.password());
+        cred.setValue(record.password());
         cred.setTemporary(false);
         cred.setType(CredentialRepresentation.PASSWORD);
 
         user.setCredentials(List.of(cred));
-
-        UsersResource usersResource = getUsersResource();
-
-        Response response = usersResource.create(user);
-
-        if (Objects.equals(201, response.getStatus())) {
-            return userRegistrationRecord;
-        }
-
-        log.error("Keycloak 사용자 생성 실패 - status: {}, reason: {}",
-                response.getStatus(), response.getStatusInfo().getReasonPhrase());
-        throw new RuntimeException(
-                "Keycloak 사용자 생성에 실패했습니다. HTTP Status: " + response.getStatus());
+        return user;
     }
 
     private UsersResource getUsersResource() {
-        RealmResource realm1 = keycloak.realm(realm);
-        return realm1.users();
+        return keycloak.realm(realm).users();
     }
 
     /**
@@ -92,8 +102,18 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
      */
     @Override
     public UserRepresentation deleteUserById(String userId) {
-        UserRepresentation user = getUsersResource().get(userId).toRepresentation();
-        getUsersResource().delete(userId);
+        UsersResource usersResource = getUsersResource();
+        UserRepresentation user = usersResource.get(userId).toRepresentation();
+        usersResource.delete(userId);
         return user;
+    }
+
+    /**
+     * Keycloak 사용자 생성 실패 시 발생하는 예외입니다.
+     */
+    public static class UserCreationException extends RuntimeException {
+        public UserCreationException(String message) {
+            super(message);
+        }
     }
 }
