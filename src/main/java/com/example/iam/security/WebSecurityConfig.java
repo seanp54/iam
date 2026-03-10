@@ -20,18 +20,12 @@ public class WebSecurityConfig  {
                         .requestMatchers(HttpMethod.GET, "/users/**").permitAll()
                         .anyRequest().authenticated()
                 )
-//                .oauth2ResourceServer(oauth2 -> oauth2
-//                        .jwt(jwt -> jwt
-//                                .jwtAuthenticationConverter(jwtAuthConverter)
-//                        )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .build();
-
     }
 
     @Bean
     public WebSecurityCustomizer webSecurityCustomizer() {
-
         return (web) -> {
             web.ignoring().requestMatchers(
                     HttpMethod.POST, "/users/**"

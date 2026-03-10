@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest
 public class AdminClientServiceTest {
 
-//AdminClientServiceTest    @Autowired
+//    @Autowired
 //    private AdminClientService adminClientService;
 //
 //    @Test
@@ -22,7 +22,6 @@ public class AdminClientServiceTest {
 //
 //        // Call the method
 //        // assertTrue(adminClientService.searchUsers() != null);
-//
 //
 //        // Redirecting logger output to console
 //        System.out.println("Finished testSearchUsers()");

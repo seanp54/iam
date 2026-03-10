@@ -12,19 +12,18 @@ import java.security.Principal;
 @RestController
 @RequestMapping("/users")
 @AllArgsConstructor
-public class KeycloakUserApi extends RuntimeException {
+public class KeycloakUserApi {
 
     @Autowired
     private KeycloakUserService keycloakUserService;
 
     @PostMapping
-    public UserRegistrationRecord craeteUser(@RequestBody UserRegistrationRecord userRegistrationRecord) {
-
+    public UserRegistrationRecord createUser(@RequestBody UserRegistrationRecord userRegistrationRecord) {
         return keycloakUserService.createUser(userRegistrationRecord);
     }
+
     @GetMapping
     public UserRepresentation getUser(Principal principal) {
-
         return keycloakUserService.getUserById(principal.getName());
     }
 
